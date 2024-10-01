@@ -1,39 +1,120 @@
 import { Button, Col, Flex } from "antd";
+import { FieldValues, SubmitHandler } from "react-hook-form";
 
 import { useState } from "react";
-import { FieldValues, SubmitHandler } from "react-hook-form";
-import { useGetAcademicFacultiesQuery } from "../../../redux/features/admin/academicManagement.api";
+import moment from "moment";
+import { useCreateOfferedCourseMutation, useGetAllCoursesQuery, useGetAllSemesterRegistrationQuery, useGetCourseFacultiesQuery } from "../../../redux/features/admin/courseManagement";
+import { useGetAcademicDepartmentsQuery, useGetAcademicFacultiesQuery } from "../../../redux/features/admin/academicManagement.api";
 import SHForm from "../../../components/form/SHForm";
+import SHSelect from "../../../components/form/SHSelect";
 import SHSelectWithWatch from "../../../components/form/SHSelectwithWatch";
 import SHInput from "../../../components/form/SHInput";
+import SHTimePicker from "../../../components/form/SHTimePicker";
+import { weekDaysOptions } from "../../../components/constants/global";
+
+
 
 const OfferCourse = () => {
-  const [id, setId] = useState("");
+  const [courseId, setCourseId] = useState("");
 
-  console.log("Inside parent component", id);
+  const [addOfferedCourse] = useCreateOfferedCourseMutation();
+
+  const { data: semesterData } =
+    useGetAllSemesterRegistrationQuery(undefined);
 
   const { data: academicFacultyData } = useGetAcademicFacultiesQuery(undefined);
 
-  const academicSemesterOptions = academicFacultyData?.data?.map((item) => ({
+  const { data: academicDepartmentData } =
+    useGetAcademicDepartmentsQuery(undefined);
+
+  const { data: coursesData } = useGetAllCoursesQuery(undefined);
+
+  const { data: facultiesData, isFetching: fetchingFaculties } =
+    useGetCourseFacultiesQuery(courseId, { skip: !courseId });
+
+  const semesterRegistrationOptions = semesterData?.data?.map((item) => ({
+    value: item._id,
+    label: `${item.academicSemester.name} ${item.academicSemester.year}`,
+  }));
+
+  const academicFacultyOptions = academicFacultyData?.data?.map((item) => ({
     value: item._id,
     label: item.name,
   }));
 
-  const onSubmit: SubmitHandler<FieldValues> = (data) => {
-    console.log(data);
+  const academicDepartmentOptions = academicDepartmentData?.data?.map(
+    (item) => ({
+      value: item._id,
+      label: item.name,
+    })
+  );
+
+  const courseOptions = coursesData?.data?.map((item) => ({
+    value: item._id,
+    label: item.title,
+  }));
+
+  const facultiesOptions = facultiesData?.data?.faculties?.map((item: FieldValues) => ({
+    value: item._id,
+    label: item.fullName,
+  }));
+
+  const onSubmit: SubmitHandler<FieldValues> = async (data) => {
+    const offeredCourseData = {
+      ...data,
+      maxCapacity: Number(data.maxCapacity),
+      section: Number(data.section),
+      startTime: moment(new Date(data.startTime)).format("HH:mm"),
+      endTime: moment(new Date(data.endTime)).format("HH:mm"),
+    };
+    console.log(offeredCourseData);
+
+    const res = await addOfferedCourse(offeredCourseData);
+    console.log(res);
   };
 
   return (
     <Flex justify="center" align="center">
-      <Col span={6}>
+      <Col span={10}>
         <SHForm onSubmit={onSubmit}>
-          <SHSelectWithWatch
-            onValueChange={setId}
-            label="Academic Semester"
-            name="academicSemester"
-            options={academicSemesterOptions}
+          <SHSelect
+            name="semesterRegistration"
+            label="Semester Registrations"
+            options={semesterRegistrationOptions}
           />
-          <SHInput disabled={!id} type="text" name="test" label="Test" />
+          <SHSelect
+            name="academicFaculty"
+            label="Academic Faculty"
+            options={academicFacultyOptions}
+          />
+          <SHSelect
+            name="academicDepartment"
+            label="Academic Department"
+            options={academicDepartmentOptions}
+          />
+          <SHSelectWithWatch
+            onValueChange={setCourseId}
+            options={courseOptions}
+            name="course"
+            label="Course"
+          />
+          <SHSelect
+            disabled={!courseId || fetchingFaculties}
+            name="faculty"
+            label="Faculty"
+            options={facultiesOptions}
+          />
+          <SHInput type="number" name="section" label="Section" />
+          <SHInput type="number" name="maxCapacity" label="Max Capacity" />
+          <SHSelect
+            mode="multiple"
+            options={weekDaysOptions}
+            name="days"
+            label="Days"
+          />
+          <SHTimePicker name="startTime" label="Start Time" />
+          <SHTimePicker name="endTime" label="End Time" />
+
           <Button htmlType="submit">Submit</Button>
         </SHForm>
       </Col>
