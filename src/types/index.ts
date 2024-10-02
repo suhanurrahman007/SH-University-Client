@@ -6,3 +6,4 @@ export * from "./courseManagement.type";
 export * from "./faculties.type";
 
 
+

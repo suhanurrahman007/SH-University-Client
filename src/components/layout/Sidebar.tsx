@@ -19,13 +19,13 @@ const Sidebar = () => {
 
   const token = useAppSelector(useCurrentToken);
 
-  let user;
+  let user
 
   if (token) {
     user = verifyToken(token);
   }
 
-  let SidebarItems;
+  let SidebarItems
 
   switch ((user as TUser)!.role) {
     case userRole.ADMIN:
